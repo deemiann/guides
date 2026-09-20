@@ -105,7 +105,7 @@ Descarga de los paquetes esenciales y generación de la tabla de montajes.
 
 ```console
 # Instalar sistema base, microcódigo según procesador y herramientas
-$ pacstrap -K /mnt base linux linux-firmware *[intel-ucode o amd-ucode]* vim networkmanager
+$ pacstrap -K /mnt base base-devel linux linux-firmware *[intel-ucode o amd-ucode]* vim networkmanager git sudo
 
 # Generar archivo fstab mediante UUID
 $ genfstab -U /mnt >> /mnt/etc/fstab
