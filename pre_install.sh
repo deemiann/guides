@@ -3,15 +3,16 @@
 # ==============================================================================
 # SECCIÓN DE VARIABLES CONFIGURABLES (Modifica esto a tu gusto)
 # ==============================================================================
-PARTICION_RAIZ="/dev/root"      # Tu partición raíz montada previamente
-ZONA_HORARIA="Continent/Country"     # Tu región (ej. America/Lima)
-LOCALE="id_Country.UTF-8"            # Idioma a descomentar y configurar
-KEYMAP="layout"      # Distribución de teclado (ej. dvorak-programmer)
-FONT="Lat2-Fixed16"             # Fuente de consola
-HOSTNAME_PC="hostname"            # Nombre de la máquina
-USUARIO="user"                # Nombre de tu usuario normal
-PASSWORD_ROOT="rootpsw"            # Contraseña de root
-PASSWORD_USUARIO="userpsw"  # Contraseña para tu usuario
+PARTICION_RAIZ="/dev/particion_raiz"    # Tu partición raíz montada previamente
+ZONA_HORARIA="Continente/Ciudad"        # Tu región (ej. America/Lima)
+PAISES_REFLECTOR="Pais1,Pais2"  # Países para el reflector (separados por comas)
+LOCALE="idioma_Pais.UTF-8"      # Idioma a descomentar y configurar
+KEYMAP="distribucion"           # Distribución de teclado (ej. dvorak-programmer)
+FONT="fuente"                   # Fuente de consola
+HOSTNAME_PC="hostname"          # Nombre de la máquina
+USUARIO="user"                  # Nombre de tu usuario normal
+PASSWORD_ROOT="rootpass"        # Contraseña de root
+PASSWORD_USUARIO="userpass"     # Contraseña para tu usuario
 
 
 # ¿Es una instalación completamente nueva de systemd-boot? (true / false)
@@ -48,12 +49,16 @@ else
     echo "    -> Sistema en modo BIOS (Legacy) detectado."
 fi
 
-echo "==> [2/6] Ejecutando pacstrap y generando fstab..."
+echo "==> [2/6] Reflector y llaves de pacman"
+# Uso de la variable en el comando reflector
+reflector -c "$PAISES" -l 15 -p https --sort rate --save /etc/pacman.d/mirrorlist
 
+# Inicializar llaves de pacman para evitar errores de firma
 pacman-key --init
 pacman-key --populate archlinux
 pacman -Sy --noconfirm archlinux-keyring
 
+echo "==> [2/6] Ejecutando pacstrap y generando fstab..."
 # Si es una instalación nueva del sistema, añadimos el ucode correspondiente
 if [ "$NUEVA_INSTALACION_MICRO_CODIGO" = true ]; then
     if [ -n "$UCODE" ]; then
@@ -65,10 +70,6 @@ fi
 
 # Generar el archivo fstab mediante UUID
 genfstab -U /mnt >> /mnt/etc/fstab
-
-# Copiar fuente
-#cp Lat2-Fixed16.psf.gz /mnt/usr/share/kbd/consolefonts
-curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/systemd-backup/Lat2-Fixed16.psf.gz
 
 # Crear script config_chroot.sh
 cat << 'EOF' > /mnt/config_chroot.sh
@@ -164,9 +165,9 @@ EOF
 arch-chroot /mnt bash /config_chroot.sh "$ZONA_HORARIA" "$LOCALE" "$KEYMAP" "$FONT" "$HOSTNAME_PC" "$USUARIO" "$PASSWORD_ROOT" "$PASSWORD_USUARIO" "$UCODE" "$PARTICION_RAIZ" "$NUEVA_INSTALACION_SYSTEMD_BOOT" "$MODO_EFI"
 
 # Copiar fuente
-curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/systemd-backup/Lat2-Fixed16.psf.gz
+curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/Lat2-Fixed16.psf.gz
 # Copiar install.sh
-curl -o /mnt/home/demian/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/systemd-backup/install.sh
+curl -o /mnt/home/demian/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
 
 # Limpiar archivo temporal
 rm /mnt/config_chroot.sh
