@@ -51,7 +51,7 @@ fi
 
 echo "==> [2/6] Reflector y llaves de pacman"
 # Uso de la variable en el comando reflector
-reflector -c "$PAISES" -l 15 -p https --sort rate --save /etc/pacman.d/mirrorlist
+reflector -c "$PAISES_REFLECTOR" -l 15 -p https --sort rate --save /etc/pacman.d/mirrorlist
 
 # Inicializar llaves de pacman para evitar errores de firma
 pacman-key --init
