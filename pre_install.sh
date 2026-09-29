@@ -10,13 +10,12 @@ export PASSWORD_ROOT="rootpass"                 # Contraseña de root
 export PASSWORD_USUARIO="userpass"              # Contraseña para tu usuario
 export HOSTNAME_PC="hostname"                   # Nombre de la máquina
 
-PAQUETES_BASE="base linux linux-firmware vim networkmanager sudo curl"
+PAQUETES_BASE="base linux linux-firmware networkmanager"
 PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (separados por comas)
 export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
 export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
 export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. dvorak-programmer)
-export FONT="Lat2-Fixed16"                      # Fuente de consola (ej. default8x16
-export UCODE="intel-ucode"                      # Microcódigo obligatorio: intel-ucode o amd-ucode
+export UCODE="intel-ucode"                      # Microcódigo obligatorio: (intel-ucode o amd-ucode)
 # ==============================================================================
 
 # Detener el script inmediatamente si ocurre algún error involuntario
@@ -54,11 +53,7 @@ echo "==> [7/12] [CHROOT] Configurando idiomas locales y mapa del teclado..."
 sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
 locale-gen
 echo "LANG=$LOCALE" > /etc/locale.conf
-
-cat << VCONF > /etc/vconsole.conf
-KEYMAP=$KEYMAP
-FONT=$FONT
-VCONF
+echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
 
 echo "==> [8/12] [CHROOT] Asignando la identidad de la máquina (Hostname)..."
 echo "$HOSTNAME_PC" > /etc/hostname
