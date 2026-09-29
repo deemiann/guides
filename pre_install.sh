@@ -14,7 +14,7 @@ PAQUETES_BASE="base linux linux-firmware networkmanager"
 PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (separados por comas)
 export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
 export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
-export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. dvorak-programmer)
+export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. la-latin1)
 export UCODE="intel-ucode"                      # Microcódigo obligatorio: (intel-ucode o amd-ucode)
 # ==============================================================================
 
