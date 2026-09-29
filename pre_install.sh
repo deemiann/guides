@@ -1,179 +1,120 @@
 #!/bin/bash
 
 # ==============================================================================
-# SECCIÓN DE VARIABLES CONFIGURABLES (Modifica esto a tu gusto)
+# SECCIÓN DE VARIABLES CONFIGURABLES
 # ==============================================================================
-PARTICION_RAIZ="/dev/particion_raiz"    # Tu partición raíz montada previamente
-ZONA_HORARIA="Continente/Ciudad"        # Tu región (ej. America/Lima)
-PAISES_REFLECTOR="Pais1,Pais2"  # Países para el reflector (separados por comas)
-LOCALE="idioma_Pais.UTF-8"      # Idioma a descomentar y configurar
-KEYMAP="distribucion"           # Distribución de teclado (ej. dvorak-programmer)
-FONT="fuente"                   # Fuente de consola
-HOSTNAME_PC="hostname"          # Nombre de la máquina
-USUARIO="user"                  # Nombre de tu usuario normal
-PASSWORD_ROOT="rootpass"        # Contraseña de root
-PASSWORD_USUARIO="userpass"     # Contraseña para tu usuario
+export NUEVA_INSTALACION_SYSTEMD_BOOT=true      # ¿Es una instalación completamente nueva del cargador de arranque? (true / false)
+export PARTICION_RAIZ="/dev/sdaN"               # Tu partición raíz montada previamente
+export USUARIO="user"                           # Nombre de tu usuario normal
+export PASSWORD_ROOT="rootpass"                 # Contraseña de root
+export PASSWORD_USUARIO="userpass"              # Contraseña para tu usuario
+export HOSTNAME_PC="hostname"                   # Nombre de la máquina
 
-
-# ¿Es una instalación completamente nueva de systemd-boot? (true / false)
-# Si es true, ejecuta 'bootctl install'.
-NUEVA_INSTALACION_SYSTEMD_BOOT=true
-
-# ¿Es una instalación completamente nueva de Arch que no instalo los microcódigo o no?
-# Si es true, incluye el microcódigo (intel-ucode/amd-ucode) en pacstrap.
-NUEVA_INSTALACION_MICRO_CODIGO=true
+PAQUETES_BASE="base linux linux-firmware vim networkmanager sudo curl"
+PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (separados por comas)
+export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
+export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
+export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. dvorak-programmer)
+export FONT="Lat2-Fixed16"                      # Fuente de consola (ej. default8x16
+export UCODE="intel-ucode"                      # Microcódigo obligatorio: intel-ucode o amd-ucode
 # ==============================================================================
 
-# Detener el script si ocurre algún error
+# Detener el script inmediatamente si ocurre algún error involuntario
 set -e
 
-echo "==> [1/6] Detectando hardware..."
-# Detección automática del microcódigo según el fabricante de la CPU
-if grep -q "Intel" /proc/cpuinfo; then
-    UCODE="intel-ucode"
-    echo "    -> Procesador Intel detectado."
-elif grep -q "AMD" /proc/cpuinfo; then
-    UCODE="amd-ucode"
-    echo "    -> Procesador AMD detectado."
-else
-    UCODE=""
-    echo "    -> No se detectó Intel ni AMD claramente, se omite ucode."
-fi
-
-# Detección automática si el sistema arrancó en modo UEFI o Legacy (BIOS)
-if [ -d "/sys/firmware/efi/efivars" ]; then
-    MODO_EFI=true
-    echo "    -> Sistema en modo EFI detectado."
-else
-    MODO_EFI=false
-    echo "    -> Sistema en modo BIOS (Legacy) detectado."
-fi
-
-echo "==> [2/6] Reflector y llaves de pacman"
-# Uso de la variable en el comando reflector
+echo "==> [1/12] Configurando Reflector (Espejos más rápidos)..."
 reflector -c "$PAISES_REFLECTOR" -l 15 -p https --sort rate --save /etc/pacman.d/mirrorlist
 
-# Inicializar llaves de pacman para evitar errores de firma
+echo "==> [2/12] Inicializando llaves de firma de Pacman..."
 pacman-key --init
 pacman-key --populate archlinux
 pacman -Sy --noconfirm archlinux-keyring
 
-echo "==> [2/6] Ejecutando pacstrap y generando fstab..."
-# Si es una instalación nueva del sistema, añadimos el ucode correspondiente
-if [ "$NUEVA_INSTALACION_MICRO_CODIGO" = true ]; then
-    if [ -n "$UCODE" ]; then
-        pacstrap -K /mnt base linux linux-firmware "$UCODE" vim networkmanager sudo
-    fi
-else
-    pacstrap -K /mnt base linux linux-firmware vim networkmanager sudo
+echo "==> [3/12] Consolidando lista de paquetes a instalar..."
+if [ "$NUEVA_INSTALACION_SYSTEMD_BOOT" = true ]; then
+    PAQUETES_BASE="$PAQUETES_BASE $UCODE"
 fi
 
-# Generar el archivo fstab mediante UUID
+echo "==> [4/12] Ejecutando pacstrap en el punto de montaje /mnt..."
+pacstrap -K /mnt $PAQUETES_BASE
+
+echo "==> [5/12] Generando el archivo de montaje permanente fstab (vía UUID)..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Crear script config_chroot.sh
+# Crear el script de automatización interno para el entorno Chroot
 cat << 'EOF' > /mnt/config_chroot.sh
 #!/bin/bash
 set -e
 
-# Recibir variables pasadas desde fuera del chroot
-ZONA_HORARIA="$1"
-LOCALE="$2"
-KEYMAP="$3"
-FONT="$4"
-HOSTNAME_PC="$5"
-USUARIO="$6"
-PASSWORD_ROOT="$7"
-PASSWORD_USUARIO="$8"
-UCODE="$9"
-PARTICION_RAIZ="${10}"
-NUEVA_INSTALACION_SYSTEMD_BOOT="${11}"
-MODO_EFI="${12}"
-
-echo " -> Configurando reloj y zona horaria..."
+echo "==> [6/12] [CHROOT] Sincronizando zona horaria y reloj de la placa madre..."
 ln -sf /usr/share/zoneinfo/"$ZONA_HORARIA" /etc/localtime
 hwclock --systohc
 
-echo " -> Configurando idioma y teclado..."
-# Desmarcar locale correspondiente en locale.gen
+echo "==> [7/12] [CHROOT] Configurando idiomas locales y mapa del teclado..."
 sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
 locale-gen
-
 echo "LANG=$LOCALE" > /etc/locale.conf
+
 cat << VCONF > /etc/vconsole.conf
 KEYMAP=$KEYMAP
 FONT=$FONT
 VCONF
 
-echo " -> Configurando Hostname y Red..."
+echo "==> [8/12] [CHROOT] Asignando la identidad de la máquina (Hostname)..."
 echo "$HOSTNAME_PC" > /etc/hostname
 
-echo " -> Estableciendo contraseña de root..."
+echo "==> [9/12] [CHROOT] Configurando cuentas de seguridad y contraseñas..."
 echo "root:$PASSWORD_ROOT" | chpasswd
-
-echo " -> Creando usuario y asignando grupos..."
-useradd -m "$USUARIO"
+useradd -m -G wheel,audio,video,optical,storage -s /bin/bash "$USUARIO"
 echo "$USUARIO:$PASSWORD_USUARIO" | chpasswd
-usermod -aG wheel,audio,video,optical,storage "$USUARIO"
 
-echo " -> Habilitando sudo para el grupo wheel..."
+# Descomentar la regla del grupo wheel de forma segura
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-echo " -> Generando initramfs..."
+echo "==> [10/12] [CHROOT] Compilando imágenes de arranque del Kernel (Initramfs)..."
 mkinitcpio -P
 
-echo " -> Configurando Cargador de Arranque (Systemd-boot)..."
-if [ "$MODO_EFI" = true ]; then
-    if [ "$NUEVA_INSTALACION_SYSTEMD_BOOT" = true ]; then
-        bootctl install
-        cat << LOADER > /boot/loader/loader.conf
+echo "==> [11/12] [CHROOT] Inicializando el Cargador de Arranque UEFI (Systemd-boot)..."
+if [ "$NUEVA_INSTALACION_SYSTEMD_BOOT" = true ]; then
+    bootctl install
+fi
+
+cat << LOADER > /boot/loader/loader.conf
 default arch.conf
 timeout 3
 editor no
 LOADER
-    fi
 
-    # Obtener el UUID real de la partición raíz
-    UUID_RAIZ=$(blkid -s UUID -o value "$PARTICION_RAIZ")
+# Obtener dinámicamente el identificador universal UUID de la raíz real
+UUID_RAIZ=$(blkid -s UUID -o value "$PARTICION_RAIZ")
 
-    # Definir la línea initrd del ucode si existe
-    if [ -n "$UCODE" ]; then
-        INITRD_UCODE="initrd /$UCODE.img"
-    else
-        INITRD_UCODE=""
-    fi
-
-    cat << ARCHCONF > /boot/loader/entries/arch.conf
+cat << ARCHCONF > /boot/loader/entries/arch.conf
 title Arch Linux
 linux /vmlinuz-linux
-$INITRD_UCODE
+initrd /$UCODE.img
 initrd /initramfs-linux.img
 options root=UUID=$UUID_RAIZ rw
 ARCHCONF
-else
-    echo "    -> El sistema no está en modo EFI. Se omite la instalación de Systemd-boot por defecto."
-fi
 
-echo " -> Habilitando servicios de red..."
+echo "==> [12/12] [CHROOT] Habilitando servicios esenciales del sistema..."
 systemctl enable NetworkManager.service
-systemctl enable systemd-boot-update.service || true
+systemctl enable systemd-boot-update.service
 
 EOF
 
-#cp config_chroot.sh /mnt/config_chroot.sh
+# 1. Le damos permisos de ejecución al script desde AFUERA del chroot
+chmod +x /mnt/config_chroot.sh
 
-arch-chroot /mnt bash /config_chroot.sh "$ZONA_HORARIA" "$LOCALE" "$KEYMAP" "$FONT" "$HOSTNAME_PC" "$USUARIO" "$PASSWORD_ROOT" "$PASSWORD_USUARIO" "$UCODE" "$PARTICION_RAIZ" "$NUEVA_INSTALACION_SYSTEMD_BOOT" "$MODO_EFI"
+# 2. Ahora lo puedes ejecutar directamente sin anteponer la palabra 'bash'
+arch-chroot /mnt /config_chroot.sh
 
-# Copiar fuente
-curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/Lat2-Fixed16.psf.gz
-# Copiar install.sh
-curl -o /mnt/home/demian/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
+# Limpieza estricta del entorno
+rm -f /mnt/config_chroot.sh
 
-# Limpiar archivo temporal
-rm /mnt/config_chroot.sh
-
-echo "==> [4/6] Desmontando particiones de forma segura..."
+echo "==> [OK] Desmontando todos los sistemas de archivos de forma segura..."
 umount -R /mnt
 
-echo "==> [5/6] ¡Instalación y configuración completadas con éxito!"
-echo "==> [6/6] Ya puedes apagar o reiniciar el equipo usando: poweroff"
+echo "=============================================================================="
+echo "      ¡FELICIDADES! LA INSTALACIÓN SE COMPLETÓ CON ÉXITO [12/12 PASOS]        "
+echo "=============================================================================="
+echo "Ya puedes retirar el USB de instalación y reiniciar el sistema usando: poweroff"
