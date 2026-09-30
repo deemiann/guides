@@ -12,7 +12,7 @@ export HOSTNAME_PC="hostname"                   # Nombre de la máquina
 
 PKG_CORE="base linux linux-firmware"
 PKG_EXTRA="vim networkmanager sudo"
-SERVICIOS="NetworkManager"
+export SERVICIOS="NetworkManager"
 PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (separados por comas)
 export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
 export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
