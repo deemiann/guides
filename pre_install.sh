@@ -17,6 +17,7 @@ PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (sep
 export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
 export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
 export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. la-latin1)
+export FONT="Lat2-Fixed16"                      # Fuente de tty (ej. default8x16)
 export UCODE="intel-ucode"                      # Microcódigo obligatorio: (intel-ucode o amd-ucode)
 # ==============================================================================
 
@@ -43,7 +44,7 @@ echo "==> [5/12] Generando el archivo de montaje permanente fstab (vía UUID)...
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Crear el script de automatización interno para el entorno Chroot
-cat << 'EOF' > /mnt/config_chroot.sh
+cat << EOF > /mnt/config_chroot.sh
 #!/bin/bash
 set -e
 
@@ -62,7 +63,10 @@ sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
 locale-gen
 echo "LANG=$LOCALE" > /etc/locale.conf
 
-echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
+cat << VCONF > /etc/vconsole.conf
+KEYMAP=$KEYMAP
+FONT=$FONT
+VCONF
 
 echo "==> [8/12] [CHROOT] Asignando la identidad de la máquina (Hostname)..."
 echo "$HOSTNAME_PC" > /etc/hostname
@@ -74,6 +78,14 @@ echo "$USUARIO:$PASSWORD_USUARIO" | chpasswd
 
 # Descomentar la regla del grupo wheel de forma segura
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+
+#########
+#echo "==> [10/12] [CHROOT] Modificando configuración de mkinitcpio..."
+# Reemplaza la línea MODULES=(...) asegurando que incluya i915 para Intel Early KMS
+sed -i 's/^MODULES=(.*/MODULES=(i915)/' /etc/mkinitcpio.conf
+
+# Reemplaza la línea HOOKS=(...) con la lista basada en systemd y sd-vconsole
+sed -i 's/^HOOKS=(.*/HOOKS=(base systemd sd-vconsole autodetect microcode modconf kms keyboard block filesystems fsck)/' /etc/mkinitcpio.conf
 
 echo "==> [10/12] [CHROOT] Compilando imágenes de arranque del Kernel (Initramfs)..."
 mkinitcpio -P
@@ -105,14 +117,14 @@ systemctl enable $SERVICIOS
 
 EOF
 
-# 1. Le damos permisos de ejecución al script desde AFUERA del chroot
-chmod +x /mnt/config_chroot.sh
+# Copiando fuente a /mnt
+curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/Lat2-Fixed16.psf.gz
 
-# 2. Ahora lo puedes ejecutar directamente sin anteponer la palabra 'bash'
-arch-chroot /mnt /config_chroot.sh
+# ejecucion de config_chroot.sh en /mnt
+arch-chroot /mnt bash /config_chroot.sh
 
 # Copiando install.sh en /mnt
-curl -o /mnt/home/demian/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
+curl -o /mnt/home/$USUARIO/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
 
 # Limpieza estricta del entorno
 rm -f /mnt/config_chroot.sh
