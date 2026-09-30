@@ -10,11 +10,14 @@ export PASSWORD_ROOT="rootpass"                 # Contraseña de root
 export PASSWORD_USUARIO="userpass"              # Contraseña para tu usuario
 export HOSTNAME_PC="hostname"                   # Nombre de la máquina
 
-PAQUETES_BASE="base linux linux-firmware networkmanager"
+PKG_CORE="base linux linux-firmware"
+PKG_EXTRA="vim networkmanager sudo"
+SERVICIOS="NetworkManager"
 PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (separados por comas)
 export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
 export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
 export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. la-latin1)
+export FONT="Lat2-Fixed16"                      # Fuente (ej. default8x16)
 export UCODE="intel-ucode"                      # Microcódigo obligatorio: (intel-ucode o amd-ucode)
 # ==============================================================================
 
@@ -31,19 +34,25 @@ pacman -Sy --noconfirm archlinux-keyring
 
 echo "==> [3/12] Consolidando lista de paquetes a instalar..."
 if [ "$NUEVA_INSTALACION_SYSTEMD_BOOT" = true ]; then
-    PAQUETES_BASE="$PAQUETES_BASE $UCODE"
+    PKG_CORE="$PKG_CORE $UCODE"
 fi
 
 echo "==> [4/12] Ejecutando pacstrap en el punto de montaje /mnt..."
-pacstrap -K /mnt $PAQUETES_BASE
+pacstrap -K /mnt $PKG_CORE $PKG_EXTRA
 
 echo "==> [5/12] Generando el archivo de montaje permanente fstab (vía UUID)..."
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Crear el script de automatización interno para el entorno Chroot
-cat << 'EOF' > /mnt/config_chroot.sh
+cat << EOF > /mnt/config_chroot.sh
 #!/bin/bash
 set -e
+
+#  Registrar el microcódigo en la base de datos si ya existía el archivo
+if [ "$NUEVA_INSTALACION_SYSTEMD_BOOT" = false ]; then
+    echo "==> [CHROOT] Registrando microcódigo existente en la base de datos de pacman..."
+    pacman -S --overwrite "*" --noconfirm $UCODE
+fi
 
 echo "==> [6/12] [CHROOT] Sincronizando zona horaria y reloj de la placa madre..."
 ln -sf /usr/share/zoneinfo/"$ZONA_HORARIA" /etc/localtime
@@ -53,7 +62,11 @@ echo "==> [7/12] [CHROOT] Configurando idiomas locales y mapa del teclado..."
 sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
 locale-gen
 echo "LANG=$LOCALE" > /etc/locale.conf
-echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
+
+cat << VCONSOLE > /etc/vconsole.conf
+KEYMAP=$KEYMAP
+FONT=$FONT
+VCONSOLE
 
 echo "==> [8/12] [CHROOT] Asignando la identidad de la máquina (Hostname)..."
 echo "$HOSTNAME_PC" > /etc/hostname
@@ -92,8 +105,7 @@ options root=UUID=$UUID_RAIZ rw
 ARCHCONF
 
 echo "==> [12/12] [CHROOT] Habilitando servicios esenciales del sistema..."
-systemctl enable NetworkManager.service
-systemctl enable systemd-boot-update.service
+systemctl enable $SERVICIOS
 
 EOF
 
@@ -102,6 +114,10 @@ chmod +x /mnt/config_chroot.sh
 
 # 2. Ahora lo puedes ejecutar directamente sin anteponer la palabra 'bash'
 arch-chroot /mnt /config_chroot.sh
+
+# Copiando fuente y install.sh en /mnt
+curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/Lat2-Fixed16.psf.gz
+curl -o /mnt/home/demian/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
 
 # Limpieza estricta del entorno
 rm -f /mnt/config_chroot.sh
