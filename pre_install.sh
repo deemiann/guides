@@ -79,14 +79,6 @@ echo "$USUARIO:$PASSWORD_USUARIO" | chpasswd
 # Descomentar la regla del grupo wheel de forma segura
 sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
 
-#########
-#echo "==> [10/12] [CHROOT] Modificando configuración de mkinitcpio..."
-# Reemplaza la línea MODULES=(...) asegurando que incluya i915 para Intel Early KMS
-sed -i 's/^MODULES=(.*/MODULES=(i915)/' /etc/mkinitcpio.conf
-
-# Reemplaza la línea HOOKS=(...) con la lista basada en systemd y sd-vconsole
-sed -i 's/^HOOKS=(.*/HOOKS=(base systemd sd-vconsole autodetect microcode modconf kms keyboard block filesystems fsck)/' /etc/mkinitcpio.conf
-
 echo "==> [10/12] [CHROOT] Compilando imágenes de arranque del Kernel (Initramfs)..."
 mkinitcpio -P
 
