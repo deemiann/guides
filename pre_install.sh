@@ -3,13 +3,13 @@
 # ==============================================================================
 # SECCIÓN DE VARIABLES CONFIGURABLES
 # ==============================================================================
-export NUEVA_INSTALACION_SYSTEMD_BOOT=true      # ¿Es una instalación completamente nueva del cargador de arranque? (true / false)
 export PARTICION_RAIZ="/dev/sdaN"               # Tu partición raíz montada previamente
 export USUARIO="user"                           # Nombre de tu usuario normal
 export PASSWORD_ROOT="rootpass"                 # Contraseña de root
 export PASSWORD_USUARIO="userpass"              # Contraseña para tu usuario
 export HOSTNAME_PC="hostname"                   # Nombre de la máquina
 
+export NUEVA_INSTALACION_SYSTEMD_BOOT=false      # ¿Es una instalación completamente nueva del cargador de arranque? (true / false)
 PKG_CORE="base linux linux-firmware"
 PKG_EXTRA="vim networkmanager sudo"
 export SERVICIOS="NetworkManager"
@@ -44,7 +44,7 @@ echo "==> [5/12] Generando el archivo de montaje permanente fstab (vía UUID)...
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Crear el script de automatización interno para el entorno Chroot
-cat << EOF > /mnt/config_chroot.sh
+cat << 'EOF' > /mnt/config_chroot.sh
 #!/bin/bash
 set -e
 
