@@ -17,7 +17,6 @@ PAISES_REFLECTOR="Brazil,Chile,United States"   # Países para el reflector (sep
 export ZONA_HORARIA="America/Lima"              # Tu región (ej. America/Lima)
 export LOCALE="es_PE.UTF-8"                     # Idioma a descomentar y configurar
 export KEYMAP="dvorak-programmer"               # Distribución de teclado (ej. la-latin1)
-export FONT="Lat2-Fixed16"                      # Fuente (ej. default8x16)
 export UCODE="intel-ucode"                      # Microcódigo obligatorio: (intel-ucode o amd-ucode)
 # ==============================================================================
 
@@ -44,7 +43,7 @@ echo "==> [5/12] Generando el archivo de montaje permanente fstab (vía UUID)...
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Crear el script de automatización interno para el entorno Chroot
-cat << EOF > /mnt/config_chroot.sh
+cat << 'EOF' > /mnt/config_chroot.sh
 #!/bin/bash
 set -e
 
@@ -63,10 +62,7 @@ sed -i "s/^#$LOCALE/$LOCALE/" /etc/locale.gen
 locale-gen
 echo "LANG=$LOCALE" > /etc/locale.conf
 
-cat << VCONSOLE > /etc/vconsole.conf
-KEYMAP=$KEYMAP
-FONT=$FONT
-VCONSOLE
+echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
 
 echo "==> [8/12] [CHROOT] Asignando la identidad de la máquina (Hostname)..."
 echo "$HOSTNAME_PC" > /etc/hostname
@@ -115,8 +111,7 @@ chmod +x /mnt/config_chroot.sh
 # 2. Ahora lo puedes ejecutar directamente sin anteponer la palabra 'bash'
 arch-chroot /mnt /config_chroot.sh
 
-# Copiando fuente y install.sh en /mnt
-curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/Lat2-Fixed16.psf.gz
+# Copiando install.sh en /mnt
 curl -o /mnt/home/demian/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
 
 # Limpieza estricta del entorno
