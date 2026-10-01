@@ -101,11 +101,30 @@ title Arch Linux
 linux /vmlinuz-linux
 initrd /$UCODE.img
 initrd /initramfs-linux.img
-options root=UUID=$UUID_RAIZ rw
+options root=UUID=$UUID_RAIZ rw vt.cur_default=0
 ARCHCONF
 
 echo "==> [12/12] [CHROOT] Habilitando servicios esenciales del sistema..."
 systemctl enable $SERVICIOS
+
+# INTEGRACIÓN 2: Crear el servicio personalizado para inyectar tus colores Gruvbox en el arranque de la TTY
+echo "==> [CHROOT] Creando servicio para el esquema de colores Gruvbox en la TTY..."
+cat << 'TTYCOLORS' > /etc/systemd/system/tty-retrobox-dark.service
+[Unit]
+Description=Aplicar esquema de colores Gruvbox a las TTYs de forma temprana
+After=systemd-vconsole-setup.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sh -c 'for tty in /dev/tty[1-6]; do echo -ne "\\e]P01C1C1C\\e]P1CC241D\\e]P298971A\\e]P3D79921\\e]P4458588\\e]P5B16286\\e]P6689D6A\\e]P7A89984\\e]P8928374\\e]P9FB5944\\e]PAB8BB26\\e]PBFABD2F\\e]PC83A598\\e]PDD3869B\\e]PE8EC07C\\e]PFEBDBB2\\e[2J\\e[H" > "$tty"; done'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+TTYCOLORS
+
+# Habilitar el nuevo servicio de colores de manera nativa dentro del Chroot
+systemctl enable tty-retrobox-dark.service
 
 EOF
 
