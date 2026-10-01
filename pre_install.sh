@@ -135,7 +135,7 @@ curl -o /mnt/usr/share/kbd/consolefonts/Lat2-Fixed16.psf.gz https://raw.githubus
 arch-chroot /mnt bash /config_chroot.sh
 
 # Copiando install.sh en /mnt
-curl -o /mnt/home/$USUARIO/install.sh https://raw.githubusercontent.com/deemiann/dotfiles-arch/main/.config/system-backup/install.sh
+curl -o /mnt/home/$USUARIO/install.sh https://raw.githubusercontent.com/deemiann/guides/main/install.sh
 
 # Limpieza estricta del entorno
 rm -f /mnt/config_chroot.sh
